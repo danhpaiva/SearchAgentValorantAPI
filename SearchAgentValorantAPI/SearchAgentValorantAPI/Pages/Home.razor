@@ -1,0 +1,82 @@
+﻿@page "/"
+@using SearchAgentValorantAPI.Models
+@inject HttpClient Http
+
+<PageTitle>Search Valorant Agent</PageTitle>
+
+<h1>Buscar Agente VALORANT</h1>
+
+<div class="form-group">
+    <label for="agentUuid">UUID do Agente:</label>
+    <input type="text" class="form-control" id="agentUuid" @bind="agentUuid" placeholder="Insira o UUID do agente aqui" />
+</div>
+<button class="btn btn-primary mt-2" @onclick="SearchAgent">Buscar Agente</button>
+
+@if (isLoading)
+{
+    <p><em>Carregando...</em></p>
+}
+
+@if (agent != null)
+{
+    <hr />
+    <h2>@agent.DisplayName</h2>
+    @if (!string.IsNullOrEmpty(agent.FullPortrait))
+    {
+        <img src="@agent.FullPortrait" alt="@agent.DisplayName Full Portrait" style="max-width: 50%; height: auto;" />
+    }
+    <h3>@agent.Description</h3>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <hr />
+    <p class="text-danger">@errorMessage</p>
+}
+
+@code {
+    private string agentUuid;
+    private AgentData agent;
+    private bool isLoading;
+    private string errorMessage;
+
+    private async Task SearchAgent()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        agent = null; // Limpa o agente anterior
+
+        if (string.IsNullOrWhiteSpace(agentUuid))
+        {
+            errorMessage = "Por favor, insira um UUID de agente.";
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            var apiUrl = $"https://valorant-api.com/v1/agents/{agentUuid}";
+            var response = await Http.GetFromJsonAsync<AgentResponse>(apiUrl);
+
+            if (response != null && response.Status == 200 && response.Data != null)
+            {
+                agent = response.Data;
+            }
+            else
+            {
+                errorMessage = "Agente não encontrado ou erro na API. Verifique o UUID.";
+            }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = $"Erro de conexão: {httpEx.Message}. Verifique sua conexão ou o UUID.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ocorreu um erro inesperado: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
